@@ -47,6 +47,7 @@
        error
        env
        (params (default #unspecified))
+       (parts (default #unspecified))
        id
        keep-connection?
        socket)
@@ -59,7 +60,9 @@
     (generic fastcgi-request-getenv request::fastcgi-request
 					name::bstring)
     (generic fastcgi-request-get-param request::fastcgi-request
-				   name)))
+				   name)
+    (generic fastcgi-request-get-part reguest::fastcgi-request
+	     name)))
 
 ;;; SIGNAL definitions
 (define +sigterm+ (pragma::int "SIGTERM"))
@@ -714,6 +717,16 @@
 	       res))))
 
 
+(define-generic (fastcgi-request-get-part request::fastcgi-request
+					  name)
+   (when (eq? (fastcgi-request-parts request) #unspecified)
+      (initialize-parts! request))
+    (with-access::fastcgi-request request (parts)
+      (let ((res (assoc name parts)))
+	 (if res
+	     (cdr res)
+	     res))))
+
 
 (define (string-trim str)
         ;;determine start of first non space character
@@ -763,19 +776,26 @@
 						      "application/x-www-form-urlencoded")
 				  (string-append query
 						 (read-string (fastcgi-request-input request))))
-				 ((string-contains-ci content-type
-						      "multipart/form-data")
-				  (read-string (fastcgi-request-input request)))
 				 (else
 				  query)))))
 	 (input-port-reopen! (fastcgi-request-input request))
 	 (with-access::fastcgi-request request (params)
-	    (if (string-contains-ci content-type
-				    "multipart/form-data")
-		(set! params (multipart-form-data->map param-src (get-boundary content-type)))
-		(set! params (x-www-url-encoded-form-data->map param-src)))))))
+	    (set! params (x-www-url-encoded-form-data->map param-src))))))
 	 
-	     
+
+(define (initialize-parts! request::fastcgi-request)
+   (let* ((content-type (fastcgi-request-getenv request "CONTENT_TYPE"))
+	  (part-src (if (string-contains-ci content-type
+					    "multipart/form-data")
+		    (read-string (fastcgi-request-input request))
+		    "")))
+      (input-port-reopen! (fastcgi-request-input request))
+      (with-access::fastcgi-request request (parts)
+	 (if (not (string=? part-src ""))
+	     (set! parts (multipart-form-data->map
+			  part-src
+			  (get-boundary content-type)))
+	     (set! parts '())))))
 	  
 
 

@@ -4,7 +4,43 @@
        header
        data)
     (x-www-url-encoded-form-data->map str)
-    (multipart-form-data->map str boundary)))
+    (multipart-form-data->map str boundary)
+    (generic form-part-name part::form-part)
+    (generic form-part-get-header part::form-part name)))
+
+;;;; form-part
+
+(define (value-attributes value)
+   (reverse!
+    (fold (lambda (s i) (let ((res (string-split i "=")))
+			   (if (= (length res) 1)
+			       (cons (string-trim (car res)) s)
+			       (cons (cons (string-trim (car res))
+					   (string-trim (cadr res)))
+				     s))))
+	  '()
+	  (string-split value ";"))))
+
+
+(define (header-name header)
+   (let ((cd (assoc "Content-Disposition" header)))
+      (if cd
+	  (let ((nv (assoc "name" (value-attributes (cdr cd)))))
+	     (if nv
+		 (unquote (cdr nv))
+		 ""))
+	  "")))
+
+(define-generic (form-part-name part::form-part)
+   (header-name (form-part-header part)))
+
+
+(define-generic (form-part-get-header part::form-part name)
+   (with-access::form-part part (header)
+      (let ((cd (assoc name header)))
+	 (if cd
+	     (cdr cd)
+	     cd))))
 
 
 (define (hex-char->integer hc)
@@ -102,8 +138,9 @@
 
 (define (initial-boundary-found? boundary #!optional
 			      (port (current-input-port)))
-   (let ((dd-boundary (string-append "--" boundary)))
-      (string=? dd-boundary (read-line port))))
+   (let ((dd-boundary (string-append "--" boundary))
+	 (line (read-line port)))
+      (string=? dd-boundary line)))
    
 (define (part-fold port boundary seed proc)
    (if (not (initial-boundary-found? boundary port))
@@ -151,15 +188,8 @@
 	  (name (string-trim (car nvpair)))
 	  (value (cadr nvpair)))
       (cons name
-	    (reverse!
-	     (fold (lambda (s i) (let ((res (string-split i "=")))
-				    (if (= (length res) 1)
-					(cons (string-trim (car res)) s)
-					(cons (cons (string-trim (car res))
-						    (string-trim (cadr res)))
-					      s))))
-		   '()
-		   (string-split value ";"))))))
+	    value)))
+
    
 
 
@@ -187,14 +217,6 @@
       (substring str start end)))
       
 
-(define (header-name header)
-   (let ((cd (assoc "Content-Disposition" header)))
-      (if cd
-	  (let ((attrib (assoc "name" (cddr cd))))
-	     (if attrib
-		 (unquote (cdr attrib))
-		 ""))
-	  "")))
 
 
 (define (multipart-form-data->map str boundary)
