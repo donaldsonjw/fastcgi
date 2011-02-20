@@ -495,7 +495,7 @@
 	  res)))
 
 (define (create-request-input input-recs)
-   (let loop ((is input-recs)
+   (let loop ((is (reverse input-recs))
 	      (data ""))
       (if (pair? is)
 	  (loop (cdr is)
