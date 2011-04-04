@@ -1,0 +1,104 @@
+\input texinfo
+
+@setfilename fastcgi.info
+@settitle fastcgi
+
+@ifinfo
+
+Copyright @copyright{} 2011 Joseph Donaldson 
+@end ifinfo 
+
+@titlepage
+@sp 10
+@comment The title is printed in a large font.
+@center @titlefont{fastcgi}
+
+@c The following two commands start the copyright page.
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{}  2011 Joseph Donaldson 
+@end titlepage
+
+@node    Top,       Overview, ,         (dir)
+@comment node-name, next,          previous, up
+@menu
+* Overview::    What is this fastcgi library?.
+* API Reference:: 
+* Index::   
+@end menu
+
+@node    Overview, API Reference, Top,      Top
+@comment node-name,     next,          previous, up
+@chapter Overview
+
+The fastcgi library is a small library providing bigloo with partial support for the fastcgi protocol. Although the fastcgi protocol supports a number of application types (responder, authorizer, filter), the bigloo fastcgi library only supports the most common application type, responder. The responder application type provides a similar, but more efficient, application model to CGI/1.1. Support for the authorizer and filter application types may be added later.
+
+The rest of this document will describes the bigloo fastcgi application programming interface.
+
+@node API Reference,Index,Overview,Top
+@comment node-name, next,          previous, up
+@chapter API Reference
+.
+
+@menu
+* fastcgi-for-each::
+* fastcgi-request::
+* form-part
+@end menu
+
+@node fastcgi-for-each, fastcgi-request, ,API Reference
+@comment node-name, next,          previous, up
+@section fastcgi-for-each
+
+The most important procedure provided by the bigloo fastcgi library is the 'fast-for-each' function. It provides the the means by which a handler for fastcgi requests are established.
+
+@defun fastcgi-for-each proc
+@code{fastcgi-for-each} accepts a single argument, the procedure to handle incoming fastcgi requests. In normal operation this method will not return. It waits in a loop for fastcgi requests and upon receiving a request dispatches them to @var{proc}. @var{proc} must be a procedure that accepts a single fastcgi-request argument and produces a fastcgi response.
+@end defun  
+
+@node fastcgi-request, , fastcgi-for-each ,API Reference
+@comment node-name, next,          previous, up
+@section fastcgi-request
+The @code{fastcgi-request} class reifies a fastcgi request. It allows access to the request information as well as the means to form a fastcgi response.
+
+@defivar fastcgi-request input
+The @code{input} field is an input port providing access to the input data, if any, provided with the fastcgi request.         
+@end defivar 
+
+@defivar fastcgi-request output
+The @code{output} field is an output port. Data pushed to @code{output} is used to form the response to a fastcgi request.         
+@end defivar
+
+@defivar fastcgi-request error
+The @code{error} field is an output port. Data pushed to @code{output} is used to report errors to the application (usually a web server) calling the fastcgi application.         
+@end defivar
+
+
+@defmethod fastcgi-request getenv request name
+The @code{getenv} method retrieves the environment variable, @code{name}, from the @code{request} object. If @code{name} is not found, @code{getenv} returns #f. 
+@end defmethod
+
+@defmethod fastcgi-request get-param request name
+The @code{get-param} method retrieves the GET or POST parameter, @code{name}. If @code{name} is not found, @code{get-param} returns #f.
+@end defmethod
+
+@defmethod fastcgi-request get-part request name
+The @code{get-part} method retrieves the part, @code{name}. If @code{name} is not found, @code{get-part} returns #f.
+@end defmethod
+
+@defmethod fastcgi-request finish request
+The @code{finish} method finalizes the response to a fastcgi-request.
+@end defmethod
+
+@node    form-part,    ,fastcgi-request, API Reference
+@comment node-name, next,          previous, up
+
+
+@node    Index,    ,API Reference, Top
+@comment node-name, next,          previous, up
+@unnumbered Index
+
+@printindex cp
+
+@contents
+@bye  
