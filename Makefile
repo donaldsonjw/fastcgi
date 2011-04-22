@@ -14,8 +14,8 @@ BIGLOOLIBDIR := $(shell $(BIGLOO) -eval "(print *default-lib-dir*) (exit 0)" -q)
 
 #install related variables
 DESTDIR = /usr
-LIBDIR = $(DESTDIR)/lib
-BIGLOOLIBDIR = $(LIBDIR)/bigloo/$(BIGLOO_VERSION)
+INSTLIBDIR = $(DESTDIR)/lib
+INSTBIGLOOLIBDIR = $(LIBDIR)/bigloo/$(BIGLOO_VERSION)
 
 
 VERSION = 0.1
@@ -81,7 +81,7 @@ all: .afile .etags lib recette/testfastcgi
 
 
 .afile: $(BIGLOOSRCS)
-	$(BGLAFILE) -o $@  $^
+	@$(BGLAFILE) -o $@  $^
 
 .etags: $(BIGLOOSRCS)
 	$(BGLTAGS) -o $@ $^
@@ -148,11 +148,14 @@ $(DISTDIR):
 
 install: all
 	for file in $(DISTDIR)/*; do \
-	  $(INSTALL) $$file $(BIGLOOLIBDIR)/`basename $$file`; \
+	  $(INSTALL) $$file $(INSTBIGLOOLIBDIR)/`basename $$file`; \
 	done; \
 	for file in $(DISTDIR)/*.so; do \
-	  $(LINK) -s $(BIGLOOLIBDIR)/`basename $$file` $(LIBDIR)/`basename $$file`; \
+	  $(LINK) -s $(INSTBIGLOOLIBDIR)/`basename $$file` $(INSTLIBDIR)/`basename $$file`; \
 	done
+
+check-syntax: .afile
+	$(BIGLOO) -init ${CHK_SOURCES}
 
 clean:
 	rm -f -r $(OBJDIR);\
