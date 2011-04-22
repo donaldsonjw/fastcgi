@@ -23,7 +23,8 @@ Copyright @copyright{}  2011 Joseph Donaldson
 @comment node-name, next,          previous, up
 @menu
 * Overview::    What is this fastcgi library?.
-* API Reference:: 
+* API Reference::
+* Example::  
 * Index::   
 @end menu
 
@@ -35,7 +36,7 @@ The fastcgi library is a small library providing bigloo with partial support for
 
 The rest of this document will describes the bigloo fastcgi application programming interface.
 
-@node API Reference,Index,Overview,Top
+@node API Reference,Example,Overview,Top
 @comment node-name, next,          previous, up
 @chapter API Reference
 .
@@ -43,20 +44,20 @@ The rest of this document will describes the bigloo fastcgi application programm
 @menu
 * fastcgi-for-each::
 * fastcgi-request::
-* form-part
+* form-part::
 @end menu
 
 @node fastcgi-for-each, fastcgi-request, ,API Reference
 @comment node-name, next,          previous, up
 @section fastcgi-for-each
 
-The most important procedure provided by the bigloo fastcgi library is the 'fast-for-each' function. It provides the the means by which a handler for fastcgi requests are established.
+The most important procedure provided by the bigloo fastcgi library is @code{fast-for-each}. It provides the the means by which a handler for fastcgi requests are established.
 
 @defun fastcgi-for-each proc
 @code{fastcgi-for-each} accepts a single argument, the procedure to handle incoming fastcgi requests. In normal operation this method will not return. It waits in a loop for fastcgi requests and upon receiving a request dispatches them to @var{proc}. @var{proc} must be a procedure that accepts a single fastcgi-request argument and produces a fastcgi response.
 @end defun  
 
-@node fastcgi-request, , fastcgi-for-each ,API Reference
+@node fastcgi-request, form-part, fastcgi-for-each ,API Reference
 @comment node-name, next,          previous, up
 @section fastcgi-request
 The @code{fastcgi-request} class reifies a fastcgi request. It allows access to the request information as well as the means to form a fastcgi response.
@@ -72,7 +73,6 @@ The @code{output} field is an output port. Data pushed to @code{output} is used 
 @defivar fastcgi-request error
 The @code{error} field is an output port. Data pushed to @code{output} is used to report errors to the application (usually a web server) calling the fastcgi application.         
 @end defivar
-
 
 @defmethod fastcgi-request getenv request name
 The @code{getenv} method retrieves the environment variable, @code{name}, from the @code{request} object. If @code{name} is not found, @code{getenv} returns #f. 
@@ -92,13 +92,50 @@ The @code{finish} method finalizes the response to a fastcgi-request.
 
 @node    form-part,    ,fastcgi-request, API Reference
 @comment node-name, next,          previous, up
+The @code{form-part} class represents a single part in a multi-part document.
+
+@defmethod form-part name part
+@code{name} returns the name of the part.
+@end defmethod
+
+@defmethod form-part get-header part name
+@code{get-header} returns the header, @code{name}. If the @code{name} does not exist, @code{get-header} returns #f.
+@end defmethod
+
+@node    Example,Index ,API Reference, Top
+@comment node-name, next,          previous, up
+The following is a simple example of using the fastcgi library. It returns a simple hello world page when invoked.
+
+@example
+@cartouche 
+(module example
+   (library fastcgi)
+   (main main))
+
+(define (handle-request request)
+   (with-access::fastcgi-request request (output)
+      (fprint output "Content-type: text/html")
+      (newline output)
+      (fprint output "<html><head><title>Example</title>")
+      (fprint output "</head><body><h1>Example</h1>")
+      (fprint output "<p>Hello World</p></body</html>")
+      (fastcgi-finish request)))
 
 
-@node    Index,    ,API Reference, Top
+(define (main args)
+   (fastcgi-for-each handle-request))
+@end cartouche
+@end example
+
+
+
+@node    Index,    ,Example, Top
 @comment node-name, next,          previous, up
 @unnumbered Index
 
-@printindex cp
+@syncodeindex tp fn
+@syncodeindex vr fn
+@printindex fn
 
 @contents
 @bye  
