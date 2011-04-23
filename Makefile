@@ -15,7 +15,7 @@ BIGLOOLIBDIR := $(shell $(BIGLOO) -eval "(print *default-lib-dir*) (exit 0)" -q)
 #install related variables
 DESTDIR = /usr
 INSTLIBDIR = $(DESTDIR)/lib
-INSTBIGLOOLIBDIR = $(LIBDIR)/bigloo/$(BIGLOO_VERSION)
+INSTBIGLOOLIBDIR = $(INSTLIBDIR)/bigloo/$(BIGLOO_VERSION)
 
 
 VERSION = 0.1
