@@ -177,7 +177,7 @@
 	  (let ((b1 (read-byte port))
 		(b2 (read-byte port))
 		(b3 (read-byte port)))
-	     (bit-or (bit-lsh b0 24) (bit-or (bit-lsh b1 16) (bit-or (bit-lsh b2 8) b3)))))))
+	     (bit-or (bit-lsh (bit-and b0 #x7f) 24) (bit-or (bit-lsh b1 16) (bit-or (bit-lsh b2 8) b3)))))))
 
 (define (read-name-value port)
    (let* ((name-length (read-nv-length port))
@@ -200,6 +200,8 @@
 ;;; factory function for creating  instances of the various
 ;;; fastcgi request record types from request data
 (define (fastcgi-record-factory-create version type request-id content)
+   (with-output-to-file "/tmp/fastcgi.stuff"
+      (lambda () (display content)))
    (cond ((= +fastcgi-begin-request-type+ type)
 	  (receive (role flags reserved)
 	     (with-input-from-string content
