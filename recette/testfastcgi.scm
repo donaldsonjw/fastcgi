@@ -2,11 +2,12 @@
    (library fastcgi)
    (main main))
 
+
 ;;;; Test code 
 (define count 0)
 (define (test-handler request)
    (with-access::fastcgi-request request
-	 (output)
+	 (output keep-connection?)
       ;(print request)
       (fprint output "Content-type: text/html")
       (newline output)
@@ -14,7 +15,7 @@
       ;(print "count: " count)
       (fprint output "<html><head><title>Test</title></head><body><h1>Test</h1>")
       (fprintf output "<p>keep-connection?: ~a </p> <p>count: ~a </p></body</html>"
-	       (fastcgi-request-keep-connection? request)
+	       keep-connection?
 	       count)
       (fprintf output "<p>REQUEST_URI: ~a</p>" (fastcgi-request-getenv request "REQUEST_URI"))
       (set! count (+ count 1))

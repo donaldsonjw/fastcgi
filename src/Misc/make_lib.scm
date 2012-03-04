@@ -18,4 +18,5 @@
 (module __fastcgi_make_lib
    (library pthread-extra)
    (import fastcgi.fastcgi)
+   (import fastcgi.cookie)
    (eval (export-all)))

@@ -34,6 +34,11 @@
        (loadq fname))
     (set! *additional-bigloo-libraries* 
 	  (cons 'pthread-extra *additional-bigloo-libraries*))
-	  
+
+     (let* ((fname (find-file/path "mail.init" *lib-dir*)))
+       (loadq fname))
+    (set! *additional-bigloo-libraries* 
+	  (cons 'bigloomail *additional-bigloo-libraries*))
+
     
     ))

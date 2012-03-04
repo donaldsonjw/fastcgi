@@ -9,14 +9,12 @@ Copyright @copyright{} 2011 Joseph Donaldson
 @end ifinfo 
 
 @titlepage
-@sp 10
-@comment The title is printed in a large font.
-@center @titlefont{fastcgi}
+@title fastcgi
+@author Joseph Donaldson
 
 @c The following two commands start the copyright page.
-@page
-@vskip 0pt plus 1filll
-Copyright @copyright{}  2011 Joseph Donaldson 
+@c @page
+@c @vskip 0pt plus 1filll
 @end titlepage
 
 @node    Top,       Overview, ,         (dir)

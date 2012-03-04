@@ -1,4 +1,4 @@
-;;;; Copyright(c) 2010 Joseph Donaldson(donaldsonjw@yahoo.com) 
+;;;; Copyright(c) 2010,2011,2012 Joseph Donaldson(donaldsonjw@yahoo.com) 
 ;;;; This file is part of Fastcgi.
 ;;;;
 ;;;;     Fastcgi is free software: you can redistribute it and/or modify
@@ -15,9 +15,10 @@
 ;;;;     License along with Fastcgi.  If not, see
 ;;;;     <http://www.gnu.org/licenses/>.
 (module fastcgi.fastcgi
-   (library pthread)
+   (library pthread) 
    (library pthread-extra)
    (import fastcgi.formdata)
+   (import fastcgi.cookie)
    
    (extern
     (include "cfastcgi.h")
@@ -71,6 +72,8 @@
     (class fastcgi-authorizer-request::fastcgi-request)
     (class fastcgi-filter-request::fastcgi-request
        data)
+    (fastcgi-out request::fastcgi-request content::bstring #!optional (headers '(("Content-Type" . "text/html"))))
+						       
     (generic fastcgi-finish request::fastcgi-request)
     (fastcgi-for-each proc #!key (max-threads 6))
     (generic fastcgi-request-getenv request::fastcgi-request
@@ -78,7 +81,9 @@
     (generic fastcgi-request-get-param request::fastcgi-request
 				   name)
     (generic fastcgi-request-get-part reguest::fastcgi-request
-	     name)))
+	     name)
+    (generic fastcgi-request-get-cookies request::fastcgi-request)
+    ))
 
 
 ;;; SIGNAL definitions
@@ -128,8 +133,8 @@
 
 
 ;;; records with a request-id of 0 are management records
-(define (management-record? rec)
-   (= (fastcgi-record-request-id rec) 0))
+(define (management-record? rec::fastcgi-record)
+   (= (-> rec request-id) 0))
 
 ;;; functions to read fastcgi records
 (define (read-version port)
@@ -510,7 +515,8 @@
 	      (res '()))
       (if (pair? ps)
 	  (loop (cdr ps)
-		(append (fastcgi-params-name-values (car ps)) res))
+	        (let ((rec::fastcgi-name-values (car ps)))
+		   (append (-> rec name-values) res)))
 	  res)))
 
 (define (create-request-input input-recs)
@@ -518,27 +524,25 @@
 	      (data ""))
       (if (pair? is)
 	  (loop (cdr is)
-		(string-append data (fastcgi-stdin-data (car is))))
+	        (let ((rec::fastcgi-stdin (car is)))
+		   (string-append data (-> rec data))))
 	  (open-input-string! data))))
 
 (define (create-fastcgi-responder-request socket rec-list)
-   (let ((param-recs (filter fastcgi-params? rec-list))
-	 (input-recs (filter fastcgi-stdin? rec-list))
-	 (begin-request (find fastcgi-begin-request? rec-list)))
+   (let ((param-recs (filter (lambda (x) (isa? x fastcgi-params)) rec-list))
+	 (input-recs (filter (lambda (x) (isa? x fastcgi-stdin)) rec-list))
+	 (begin-request::fastcgi-begin-request
+	    (find (lambda (x) (isa? x fastcgi-begin-request)) rec-list)))
       (instantiate::fastcgi-responder-request
 	 (env (create-request-env param-recs))
 	 (input (create-request-input input-recs))
 	 (output (create-fastcgi-output-port socket +fastcgi-stdout-type+
-					     (fastcgi-record-request-id
-					      begin-request)))
+					     (-> begin-request request-id)))
 	 (error (create-fastcgi-output-port socket +fastcgi-stderr-type+
-					    (fastcgi-record-request-id
-					     begin-request)))
-	 (id (fastcgi-record-request-id begin-request))
-	 (keep-connection? (fastcgi-begin-request-keep-connection?
-			   begin-request))
-	 (socket socket)
-	 )))
+					    (-> begin-request request-id)))
+	 (id (-> begin-request request-id))
+	 (keep-connection? (-> begin-request keep-connection?))
+	 (socket socket))))
       
 
 (define (create-fastcgi-filter-request socket rec-list)
@@ -550,8 +554,9 @@
 	  rec-list))
 
 (define (fastcgi-request-factory-create socket rec-list)
-   (let* ((begin-request-record (find fastcgi-begin-request? rec-list))
-	  (role (fastcgi-begin-request-role begin-request-record)))
+   (let* ((begin-request-record::fastcgi-begin-request
+	     (find (lambda (x) (isa? x fastcgi-begin-request)) rec-list))
+	  (role (-> begin-request-record role)))
       (cond ((= role +fastcgi-role-responder+)
 	     (create-fastcgi-responder-request socket rec-list))
 	    ((= role +fastcgi-role-filter+)
@@ -577,8 +582,8 @@
        seed
        (fold proc (proc seed (car lst)) (cdr lst))))
 
-(define (handle-management-record rec socket)
-   (let* ((nvs (fastcgi-get-values-name-values rec))
+(define (handle-management-record rec::fastcgi-get-values socket)
+   (let* ((nvs (-> rec name-values))
 	  (rl (fold (lambda (seed n)
 		       (let ((name (car n)))
 			  (cond ((string-ci=? name "FCGI_MAX_CONNS")
@@ -609,12 +614,14 @@
 ;; if we have received both params records and stdin records
 ;; we have a complete responder request
 (define (fastcgi-responder-request-ready? rec-list)
-   (and (find (lambda (rec) (and (fastcgi-params? rec)
-				   (null? (fastcgi-params-name-values rec))))
-		rec-list)
-	(find (lambda (rec) (and (fastcgi-stdin? rec)
-				   (= (string-length (fastcgi-stdin-data rec))
-				      0))) rec-list)))
+   (and (find (lambda (rec) (and (isa? rec fastcgi-params)
+				 (let ((r::fastcgi-params rec))
+				    (null? (-> r name-values)))))
+	   rec-list)
+	(find (lambda (rec) (and (isa? rec fastcgi-stdin)
+				 (let ((r::fastcgi-stdin rec))
+				    (= (string-length (-> r data))
+				       0)))) rec-list)))
 
 (define (fastcgi-filter-request-ready? rec-list)
    (error "fastcgi-filter-request-ready?" "not implemented" rec-list))
@@ -623,9 +630,10 @@
    (error "fastcgi-authorizer-request-ready?" "not implemented" rec-list))
 
 (define (fastcgi-request-ready? rec-list)
-   (let* ((begin-request-record (find fastcgi-begin-request?
+   (let* ((begin-request-record::fastcgi-begin-request (find (lambda (x) (isa? x
+						     fastcgi-begin-request))
 				 rec-list))
-	  (role (fastcgi-begin-request-role begin-request-record)))
+	  (role (-> begin-request-record role)))
       (cond ((= role +fastcgi-role-responder+)
 	     (fastcgi-responder-request-ready? rec-list))
 	    ((= role +fastcgi-role-filter+)
@@ -638,12 +646,12 @@
 
 
 (define (handle-fastcgi-connection connection-socket request-table proc)
-   (let loop ((rec (read-fastcgi-request-record
+   (let loop ((rec::fastcgi-record (read-fastcgi-request-record
 		    (socket-input connection-socket))))
       (if (management-record? rec)
 	  (handle-management-record rec connection-socket)
-	  (let* ((request-id (fastcgi-record-request-id rec))
-		 (request-started? (or (fastcgi-begin-request? rec)
+	  (let* ((request-id (-> rec request-id))
+		 (request-started? (or (isa? rec fastcgi-begin-request)
 				       (hashtable-contains? request-table
 							    request-id)))
 		 (rec-list (if request-started?
@@ -652,11 +660,11 @@
 						   rec)
 			       '())))
 	     (if (fastcgi-request-ready? rec-list)
-		 (let ((request (fastcgi-request-factory-create
+		 (let ((request::fastcgi-request (fastcgi-request-factory-create
 				 connection-socket rec-list)))
 		    (request-table-remove! request-table request-id)
 		    (proc request)		    
-		    (if (fastcgi-request-keep-connection? request)		
+		    (if (-> request keep-connection?)		
 			(loop (read-fastcgi-request-record
 			       (socket-input connection-socket)))
 			(socket-close connection-socket)))
@@ -687,14 +695,14 @@
 
 (define-generic (fastcgi-finish request::fastcgi-request)
    ;; close ports
-   (close-output-port (fastcgi-request-output request))
-   (close-output-port (fastcgi-request-error request))
+   (close-output-port (-> request output))
+   (close-output-port (-> request error))
    ;;; signal we are done with the request
-   (let ((output (socket-output (fastcgi-request-socket request)))
+   (let ((output (socket-output (->  request socket)))
 	 (end (instantiate::fastcgi-end-request
 		 (version +fastcgi-protocol-version+)
 		 (type +fastcgi-end-request-type+)
-		 (request-id (fastcgi-request-id request))
+		 (request-id (-> request id))
 		 (app-status 0)
 		 (protocol-status 0))))
       (display (fastcgi-record-serialize end) output)
@@ -711,7 +719,7 @@
 
 (define-generic (fastcgi-request-get-param request::fastcgi-request
 				   name)
-   (when (eq? (fastcgi-request-params request) #unspecified)
+   (when (eq? (-> request params) #unspecified)
       (initialize-params! request))
    (with-access::fastcgi-request request (params)
       (let ((res (assoc name params)))
@@ -721,7 +729,7 @@
 
 (define-generic (fastcgi-request-get-param-vals request::fastcgi-request
 					    name)
-   (when (eq? (fastcgi-request-params request) #unspecified)
+   (when (eq? (-> request params) #unspecified)
       (initialize-params! request))
    (with-access::fastcgi-request request (params)
 	(let loop ((nvs params)
@@ -738,13 +746,62 @@
 
 (define-generic (fastcgi-request-get-part request::fastcgi-request
 					  name)
-   (when (eq? (fastcgi-request-parts request) #unspecified)
+   (when (eq? (-> request parts) #unspecified)
       (initialize-parts! request))
     (with-access::fastcgi-request request (parts)
       (let ((res (assoc name parts)))
 	 (if res
 	     (cdr res)
 	     res))))
+
+
+(define-generic (fastcgi-request-get-cookies request::fastcgi-request)
+   (let ((cookie-param (fastcgi-request-getenv request "HTTP_COOKIE")))
+      (if cookie-param
+	  (cookies-parse cookie-param)
+	  cookie-param)))
+
+
+(define (process-cookies cookies)
+   (with-output-to-string
+      (lambda ()
+	 (let loop ((lst cookies))
+	    (when (pair? lst)
+	       (print (cookie-serialize (car lst)))
+	       (loop (cdr cookies)))))))
+		
+
+(define (process-headers headers)
+   (define (header-name header)
+      (car header))
+   (define (header-value header)
+      (cdr header))
+   (with-output-to-string
+      (lambda ()
+	 (let loop ((lst headers))
+	    (when (pair? lst)
+		(let ((header (car lst)))
+		   (cond ((string-ci=? (header-name header)
+			     "cookie")
+			  (display (process-cookies (header-value header))))
+			 (else
+			  (printf "~a:~a~%" (header-name header)
+			     (header-value header))))
+		   (loop (cdr lst))))))))
+		
+
+
+(define (fastcgi-out request::fastcgi-request content
+		   #!optional (headers '(("Content-Type" . "text/html"))))
+   (with-output-to-port (-> request output)
+      (lambda ()
+	 (display (process-headers (cons (cons "Content-Length"
+					    (string-length content))
+				      headers)))
+	 (newline)
+	 (display content)
+	 (fastcgi-finish request))))
+	 
 
 
 (define (string-trim str)
@@ -794,10 +851,10 @@
 			   (cond ((string-contains-ci content-type
 						      "application/x-www-form-urlencoded")
 				  (string-append query
-						 (read-string (fastcgi-request-input request))))
+						 (read-string (-> request input))))
 				 (else
 				  query)))))
-	 (input-port-reopen! (fastcgi-request-input request))
+	 (input-port-reopen! (-> request input))
 	 (with-access::fastcgi-request request (params)
 	    (set! params (x-www-url-encoded-form-data->map param-src))))))
 	 
@@ -806,9 +863,9 @@
    (let* ((content-type (fastcgi-request-getenv request "CONTENT_TYPE"))
 	  (part-src (if (string-contains-ci content-type
 					    "multipart/form-data")
-		    (read-string (fastcgi-request-input request))
+		    (read-string (-> request input))
 		    "")))
-      (input-port-reopen! (fastcgi-request-input request))
+      (input-port-reopen! (-> request input ))
       (with-access::fastcgi-request request (parts)
 	 (if (not (string=? part-src ""))
 	     (set! parts (multipart-form-data->map

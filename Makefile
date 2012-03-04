@@ -39,7 +39,7 @@ DISTDIR = dist
 
 # sources
 BIGLOOSRCS = src/Llib/fastcgi.scm src/Llib/form-data.scm src/Llib/base64.scm\
-	     src/Llib/quoted-printable.scm
+	     src/Llib/quoted-printable.scm src/Llib/cookie.scm
 HEAPSRC = src/Misc/make_lib.scm
 
 
