@@ -1,4 +1,4 @@
-;;;; Copyright(c) 2010,2011,2012 Joseph Donaldson(donaldsonjw@yahoo.com) 
+;;;; Copyright(c) 2010-2021 Joseph Donaldson(donaldsonjw@yahoo.com) 
 ;;;; This file is part of Fastcgi.
 ;;;;
 ;;;;     Fastcgi is free software: you can redistribute it and/or modify
@@ -15,8 +15,6 @@
 ;;;;     License along with Fastcgi.  If not, see
 ;;;;     <http://www.gnu.org/licenses/>.
 (module fastcgi.fastcgi
-   (library pthread) 
-   (library pthread-extra)
    (import fastcgi.formdata)
    (import fastcgi.cookie)
    
@@ -75,15 +73,14 @@
     (fastcgi-out request::fastcgi-request content::bstring #!optional (headers '(("Content-Type" . "text/html"))))
 						       
     (generic fastcgi-finish request::fastcgi-request)
-    (fastcgi-for-each proc #!key (max-threads 6))
+    (fastcgi-for-each proc)
     (generic fastcgi-request-getenv request::fastcgi-request
 					name::bstring)
     (generic fastcgi-request-get-param request::fastcgi-request
 				   name)
     (generic fastcgi-request-get-part reguest::fastcgi-request
 	     name)
-    (generic fastcgi-request-get-cookies request::fastcgi-request)
-    ))
+    (generic fastcgi-request-get-cookies request::fastcgi-request)))
 
 
 ;;; SIGNAL definitions
@@ -222,8 +219,6 @@
 ;;; factory function for creating  instances of the various
 ;;; fastcgi request record types from request data
 (define (fastcgi-record-factory-create version type request-id content)
-   (with-output-to-file "/tmp/fastcgi.stuff"
-      (lambda () (display content)))
    (cond ((= +fastcgi-begin-request-type+ type)
 	  (receive (role flags reserved)
 	     (with-input-from-string content
@@ -571,6 +566,9 @@
 (define (request-table-remove! table i)
    (hashtable-remove! table i))
 
+(define (request-table-contains? table i)
+   (hashtable-contains? table i))
+
 (define (request-table-put! table i rec)
    (hashtable-add! table i (lambda (obj v) (cons obj v)) rec '()))
 
@@ -652,8 +650,8 @@
 	  (handle-management-record rec connection-socket)
 	  (let* ((request-id (-> rec request-id))
 		 (request-started? (or (isa? rec fastcgi-begin-request)
-				       (hashtable-contains? request-table
-							    request-id)))
+				       (request-table-contains? request-table
+                                          request-id)))
 		 (rec-list (if request-started?
 			       (request-table-put! request-table
 						   request-id
@@ -671,23 +669,14 @@
 		 (loop (read-fastcgi-request-record
 			(socket-input connection-socket))))))))
 	 
-(define (fastcgi-for-each proc #!key (max-threads 6))
+(define (fastcgi-for-each proc)
    (let ((request-table (create-hashtable))
-	 (fastcgi-socket (%get-fast-cgi-socket))
-	 (input-buffer (make-string 512))
-	 (output-buffer (make-string 1024))
-	 (work-queue (make-work-queue max-threads)))
+	 (fastcgi-socket (%get-fast-cgi-socket)))
       (fastcgi-setup-signal-handlers)
-      (let loop ((s (socket-accept fastcgi-socket
-				   ;:inbuf input-buffer
-				   ;:outbuf output-buffer
-				   )))
-
-	 (work-queue-push! work-queue
-			   (lambda ()
-			      (handle-fastcgi-connection s
-							 request-table
-							 proc)))
+      (let loop ((s (socket-accept fastcgi-socket)))
+	 (handle-fastcgi-connection s
+            request-table
+            proc)
 	 (if (not +end-fastcgi-request-loop+)
 	     (loop (socket-accept fastcgi-socket))
 	     (socket-shutdown fastcgi-socket)))))

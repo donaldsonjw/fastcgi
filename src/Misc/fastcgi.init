@@ -1,4 +1,4 @@
-;;;; Copyright(c) 2010 Joseph Donaldson(donaldsonjw@yahoo.com) 
+;;;; Copyright(c) 2010-2021 Joseph Donaldson(donaldsonjw@yahoo.com) 
 ;;;; This file is part of Fastcgi.
 ;;;;
 ;;;;     Fastcgi is free software: you can redistribute it and/or modify
@@ -24,21 +24,7 @@
 
 (cond-expand
    (bigloo-compile
-    
-    (let* ((fname (find-file/path "pthread.init" *lib-dir*)))
-       (loadq fname))
-    (set! *additional-bigloo-libraries* 
-	  (cons 'bigloopthread *additional-bigloo-libraries*))
-
-    (let* ((fname (find-file/path "pthread-extra.init" *lib-dir*)))
-       (loadq fname))
-    (set! *additional-bigloo-libraries* 
-	  (cons 'pthread-extra *additional-bigloo-libraries*))
-
-     (let* ((fname (find-file/path "mail.init" *lib-dir*)))
-       (loadq fname))
-    (set! *additional-bigloo-libraries* 
-	  (cons 'bigloomail *additional-bigloo-libraries*))
-
-    
-    ))
+    (set! *additional-bigloo-libraries*
+       (cons 'bigloomail *additional-bigloo-libraries*)))
+    (bigloo-eval
+       #unspecified))

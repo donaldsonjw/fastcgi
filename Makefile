@@ -38,7 +38,7 @@ OBJDIR = objs
 DISTDIR = dist
 
 # sources
-BIGLOOSRCS = src/Llib/fastcgi.scm src/Llib/form-data.scm src/Llib/base64.scm\
+BIGLOOSRCS = src/Llib/fastcgi.scm src/Llib/form-data.scm \
 	     src/Llib/quoted-printable.scm src/Llib/cookie.scm
 HEAPSRC = src/Misc/make_lib.scm
 
@@ -149,10 +149,7 @@ $(DISTDIR):
 install: all
 	for file in $(DISTDIR)/*; do \
 	  $(INSTALL) $$file $(INSTBIGLOOLIBDIR)/`basename $$file`; \
-	done; \
-	for file in $(DISTDIR)/*.so; do \
-	  $(LINK) -s $(INSTBIGLOOLIBDIR)/`basename $$file` $(INSTLIBDIR)/`basename $$file`; \
-	done
+	done;
 
 check-syntax: .afile
 	$(BIGLOO) -init ${CHK_SOURCES}

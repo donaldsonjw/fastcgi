@@ -16,7 +16,7 @@
 ;;;;     <http://www.gnu.org/licenses/>.
  
 (module __fastcgi_make_lib
-   (library pthread-extra)
-   (import fastcgi.fastcgi)
-   (import fastcgi.cookie)
+   (import fastcgi.fastcgi
+           fastcgi.cookie
+           fastcgi.formdata)
    (eval (export-all)))

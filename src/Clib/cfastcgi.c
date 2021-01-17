@@ -42,16 +42,16 @@ obj_t get_fastcgi_socket(void){
   
 
   a_socket = GC_MALLOC( SOCKET_SIZE );
-  a_socket->socket_t.header = MAKE_HEADER( SOCKET_TYPE, 0 );
-  a_socket->socket_t.portnum = ntohs( port );
-  a_socket->socket_t.hostname = BUNSPEC;
-  a_socket->socket_t.hostip = BFALSE;
-  a_socket->socket_t.fd = FCGI_LISTENSOCK_FILENO;
-  a_socket->socket_t.input = BFALSE;
-  a_socket->socket_t.output = BFALSE;
-  a_socket->socket_t.stype = BGL_SOCKET_SERVER;
-  a_socket->socket_t.accept = 0L;
-  a_socket->socket_t.userdata = BUNSPEC;
+  a_socket->socket.header = MAKE_HEADER( SOCKET_TYPE, 0 );
+  a_socket->socket.portnum = ntohs( port );
+  a_socket->socket.hostname = BUNSPEC;
+  a_socket->socket.hostip = BFALSE;
+  a_socket->socket.fd = FCGI_LISTENSOCK_FILENO;
+  a_socket->socket.input = BFALSE;
+  a_socket->socket.output = BFALSE;
+  a_socket->socket.stype = BGL_SOCKET_SERVER;
+  a_socket->socket.accept = 0L;
+  a_socket->socket.userdata = BUNSPEC;
   
   return BREF( a_socket );
   
