@@ -1,4 +1,4 @@
-;;;; Copyright(c) 2010-2021 Joseph Donaldson(donaldsonjw@yahoo.com) 
+;;;; Copyright(c) 2010-2022 Joseph Donaldson(donaldsonjw@yahoo.com) 
 ;;;; This file is part of Fastcgi.
 ;;;;
 ;;;;     Fastcgi is free software: you can redistribute it and/or modify
@@ -757,7 +757,7 @@
 	 (let loop ((lst cookies))
 	    (when (pair? lst)
 	       (print (cookie-serialize (car lst)))
-	       (loop (cdr cookies)))))))
+	       (loop (cdr lst)))))))
 		
 
 (define (process-headers headers)
